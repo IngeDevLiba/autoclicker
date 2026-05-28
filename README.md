@@ -1,143 +1,212 @@
 # Microsoft Rewards Autoclicker
 
-Simula búsquedas en Microsoft Rewards de forma natural, distribuyéndolas a lo largo del día en bloques (mañana, tarde y noche) con velocidad de escritura variable, errores tipográficos ocasionales y tiempos de espera aleatorios.
+> 🟢 Automatización de flujo de búsquedas y lectura móvil con enfoque ADB para Android real por USB.
 
-## Características
+## ✨ ¿Qué hace este proyecto?
 
-| Característica | Detalle |
-|---|---|
-| Búsquedas diarias | 30–40 por cuenta |
-| Temas | Noticias, deportes, tecnología, cultura, ciencia, salud, economía |
-| Velocidad de escritura | 80–120 ms por tecla (variable) |
-| Errores tipográficos | ~4 % de probabilidad, con autocorrección |
-| Pausa entre búsquedas | 10–30 segundos (aleatoria) |
-| Lectura de artículos | 20–40 segundos con scroll simulado |
-| Bloques horarios | Mañana (08–11), Tarde (14–17), Noche (20–23) |
-| Registro | CSV por cuenta en la carpeta `logs/` |
+Este script automatiza comportamientos tipo usuario para Microsoft Rewards:
 
-## Requisitos
+- 🧠 Simula búsquedas con escritura natural (desktop).
+- 📱 Lee noticias en Android real por USB usando ADB.
+- 🧭 Filtra contenido no deseado en móvil:
+	- ignora anuncios,
+	- ignora tarjetas de video,
+	- rechaza banners de cookies cuando aparecen.
+- 📝 Guarda trazabilidad en CSV por cuenta en la carpeta logs.
 
-- Python 3.11 o superior
-- Google Chrome o Microsoft Edge instalado
-- Conexión a Internet
+## 🎬 Flujo visual del modo Android
 
-## Instalación
+Inicio → Scroll inicial largo → Detectar noticia válida → Tap centrado
+→ Rechazar cookies (si aparece) → Scroll dentro del artículo
+→ Espera de lectura → Volver atrás → Scroll de salida → Siguiente ciclo
+
+## ✅ Requisitos
+
+### Requisitos generales
+
+- Python 3.11 o superior.
+- Windows con conexión a Internet.
+- Dependencias del proyecto instaladas.
+
+### Requisitos desktop
+
+- Google Chrome o Microsoft Edge instalado.
+
+### Requisitos Android USB (modo recomendado para noticias)
+
+- Android platform-tools instalado (adb disponible).
+- Teléfono Android real (USB).
+- App Microsoft Bing instalada en el teléfono.
+- USB debugging habilitado en Opciones de desarrollador.
+
+## 🚀 Instalación paso a paso
+
+### 1) Clonar o abrir proyecto
+
+Ubícate en la carpeta del proyecto:
+
+```bash
+cd c:\Users\LAAO\Projects\autoclicker
+```
+
+### 2) Crear y activar entorno virtual (recomendado)
+
+PowerShell:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+### 3) Instalar dependencias
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Uso
+## 🧪 Verificación rápida del entorno
+
+### Verificar Python
 
 ```bash
-# Cuenta por defecto (log guardado en logs/default.csv)
-python autoclicker.py
+python --version
+```
 
-# Especificar cuenta y modo headless (sin ventana)
+### Verificar ADB
+
+```bash
+adb version
+adb devices
+```
+
+Si el teléfono aparece como unauthorized:
+
+1. Desconecta USB.
+2. Conecta de nuevo.
+3. Acepta la huella RSA en el teléfono.
+4. Ejecuta adb devices otra vez.
+
+## 🖥️ Ejecución desktop (búsquedas)
+
+### Cuenta por defecto
+
+```bash
+python autoclicker.py
+```
+
+### Cuenta personalizada + headless
+
+```bash
 python autoclicker.py --account usuario@ejemplo.com --headless
 ```
 
-### Argumentos
+> ℹ️ Nota: la lectura de noticias en desktop no se usa para acreditación de Rewards con este flujo.
 
-| Argumento | Descripción | Valor por defecto |
-|---|---|---|
-| `--account` | Identificador de cuenta (etiqueta para el log) | `default` |
-| `--headless` | Ejecutar el navegador sin ventana visible | No |
-| `--android-adb` | Usar ADB para leer noticias en Android sin Appium | No |
-| `--adb-serial` | Serial ADB del dispositivo Android | Vacío |
-| `--android-cycles` | Número de ciclos de lectura de noticias en Android | `10` |
+## 📱 Ejecución Android USB (ADB)
 
-## Nota sobre noticias
-
-La automatización de noticias de Microsoft Rewards no se acredita en Windows PC con este flujo. El script la omite en escritorio para evitar un comportamiento que Microsoft no contabiliza y que además entra en conflicto con sus políticas.
-
-## Android real
-
-La alternativa recomendada es usar un teléfono Android real conectado por USB y automatizarlo con `adb`. Este modo no usa Appium y es más corto de poner en marcha.
+### Comando recomendado
 
 ```bash
 python autoclicker.py --android-adb --adb-serial <serial> --android-cycles 10
 ```
 
-Guía rápida:
+Si tienes un solo dispositivo conectado, puedes omitir adb-serial.
 
-1. Instala Android platform-tools y verifica que `adb` responde en la terminal con `adb version`.
-2. En tu teléfono, activa Opciones de desarrollador y luego USB debugging.
-3. Conecta el teléfono por USB y acepta la huella RSA cuando aparezca.
-4. Ejecuta `adb devices` y copia el serial que aparezca como `device`.
-5. Lanza el script con `python autoclicker.py --android-adb --adb-serial <serial> --android-cycles 10`.
-6. El script abrirá Bing en el teléfono, hará un desplazamiento gradual por la sección de noticias, intentará abrir la primera noticia visible con varios puntos de toque y, si hace falta, usará Enter como respaldo.
-7. Después esperará la carga, permanecerá un tiempo aleatorio dentro del artículo y volverá atrás.
-8. Repetirá ese ciclo el número de veces indicado con `--android-cycles`.
+### Pasos detallados en el teléfono
 
-Si tienes un solo dispositivo conectado, puedes omitir `--adb-serial`.
+1. Abre Bing y déjalo instalado/actualizado.
+2. Mantén pantalla desbloqueada durante la ejecución.
+3. Conecta por USB y verifica serial con adb devices.
+4. Ejecuta el comando anterior.
+5. El script:
+	 - hará scroll inicial,
+	 - elegirá noticias válidas,
+	 - evitará anuncios y videos,
+	 - rechazará cookies cuando detecte botón de rechazo,
+	 - hará scroll dentro del artículo,
+	 - volverá al feed y repetirá.
 
-En este modo, el script usa el paquete `com.microsoft.bing` y `uiautomator dump` para localizar titulares visibles, pero ya no depende de Appium ni de automatización de búsqueda en Android.
+## ⚙️ Argumentos disponibles
 
-## Consejos
+| Argumento | Descripción | Valor por defecto |
+|---|---|---|
+| --account | Identificador de cuenta (etiqueta para logs) | default |
+| --headless | Ejecuta navegador sin UI visible (desktop) | No |
+| --android-adb | Activa flujo móvil ADB por USB | No |
+| --adb-serial | Serial ADB del dispositivo Android | Vacío |
+| --android-cycles | Cantidad de ciclos de lectura móvil | 10 |
 
-- Mantén la pantalla desbloqueada mientras corre el script.
-- Si `adb devices` muestra `unauthorized`, desconecta y vuelve a conectar el USB para aceptar la autorización.
-- Si Bing no abre en el teléfono, confirma que la app está instalada y actualizada.
-- Si no detecta noticias visibles, desplázate una vez manualmente dentro de Bing para cargar más contenido y vuelve a ejecutar.
+## 🧩 Configuración avanzada
 
-## Configuración
+Edita config.py para afinar comportamiento.
 
-Edita `config.py` para ajustar los parámetros de tiempo, número de búsquedas y bloques horarios.
+Parámetros útiles del modo Android:
 
-```python
-# Ejemplo: cambiar el rango de búsquedas diarias
-DAILY_SEARCHES_MIN = 30
-DAILY_SEARCHES_MAX = 40
+- ARTICLE_DWELL_MIN / ARTICLE_DWELL_MAX
+- ANDROID_NEWS_CYCLES
+- ANDROID_NEWS_MIN_TOP_PX
+- ANDROID_NEWS_SCROLL_STEPS_MIN / MAX
+- ANDROID_NEWS_RETURN_WAIT_MIN / MAX
 
-# Ejemplo: ajustar la velocidad de escritura (ms)
-TYPING_SPEED_MIN_MS = 80
-TYPING_SPEED_MAX_MS = 120
-```
+## 🛡️ Filtros inteligentes en Android
 
-## Estructura del proyecto
+El selector móvil descarta automáticamente:
 
-```
-autoclicker/
-├── autoclicker.py   # Orquestador principal
-├── config.py        # Parámetros configurables
-├── searches.py      # Banco de búsquedas por categoría
-├── typer.py         # Simulación de escritura natural
-├── logger.py        # Registro CSV por cuenta
-├── requirements.txt # Dependencias Python
-├── tests/           # Pruebas unitarias
-│   ├── test_searches.py
-│   ├── test_typer.py
-│   └── test_logger.py
-└── logs/            # Generado automáticamente (gitignored)
-```
+- 🔕 tarjetas de anuncios: anuncio, patrocinado, publicidad, sponsored, etc.
+- 🎥 tarjetas de video: video, reproducir, play, duración, y sellos como 02:13.
+- 🔝 elementos de cabecera superior (evita tocar el buscador).
 
-## Formato del log
+## 🧾 Logs y salida
 
-Cada cuenta genera un archivo CSV en `logs/`:
+Se crea un CSV por cuenta en logs con formato:
 
-```
+```csv
 date,account,keyword,url,dwell_seconds
-2025-06-01 08:15:32,usuario@ejemplo.com,últimas noticias de fútbol,https://www.bing.com/search?q=...,0.0
-2025-06-01 08:15:32,usuario@ejemplo.com,últimas noticias de fútbol,https://www.marca.com/...,27.4
+2025-06-01 08:15:32,usuario@ejemplo.com,titular visible,adb://device,10.0
 ```
 
-## Ejemplo de salida en consola
-
-```
-[08:14:55] Sesión iniciada para la cuenta 'usuario@ejemplo.com'. Total de búsquedas planificadas hoy: 35.
-[08:15:01] Bloque 1 (08:00–11:00): 12 búsquedas.
-[08:15:01] Escribiendo búsqueda: últimas noticias de fútbol…
-[08:15:09] Resultados cargados: https://www.bing.com/search?q=...
-[08:15:09] Leyendo artículo: Resultados de la jornada – Marca…
-[08:15:12] Desplazando página 420px…
-[08:15:15] Desplazando página 310px…
-[08:15:38] Artículo leído durante 29 segundos.
-[08:15:38] Esperando 18 segundos antes de la siguiente búsqueda…
-```
-
-## Ejecutar pruebas
+## 🧪 Pruebas
 
 ```bash
 python -m pytest tests/ -v
 ```
+
+## 🗂️ Estructura del proyecto
+
+```text
+autoclicker/
+├── autoclicker.py
+├── config.py
+├── searches.py
+├── typer.py
+├── logger.py
+├── requirements.txt
+├── tests/
+└── logs/
+```
+
+## 🧯 Solución de problemas
+
+### El script toca el buscador superior
+
+- Aumenta ANDROID_NEWS_MIN_TOP_PX en config.py.
+
+### El script no detecta noticias válidas
+
+- Haz un scroll manual en Bing para refrescar cards.
+- Verifica que no estés en una pestaña distinta del feed.
+
+### No aparece el teléfono en adb devices
+
+- Revisa cable USB de datos.
+- Activa USB debugging.
+- Reinstala drivers USB/OEM si aplica.
+
+### Aparece banner de cookies y bloquea flujo
+
+- El script intenta rechazar automáticamente.
+- Si cambia el texto del botón, se puede ampliar el matcher.
+
+## ⚠️ Nota de uso
+
+Usa este proyecto bajo tu responsabilidad y respetando los términos y políticas de la plataforma objetivo.
