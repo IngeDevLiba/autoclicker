@@ -43,10 +43,43 @@ python autoclicker.py --account usuario@ejemplo.com --headless
 |---|---|---|
 | `--account` | Identificador de cuenta (etiqueta para el log) | `default` |
 | `--headless` | Ejecutar el navegador sin ventana visible | No |
+| `--android-adb` | Usar ADB para leer noticias en Android sin Appium | No |
+| `--adb-serial` | Serial ADB del dispositivo Android | Vacío |
+| `--android-cycles` | Número de ciclos de lectura de noticias en Android | `10` |
 
 ## Nota sobre noticias
 
 La automatización de noticias de Microsoft Rewards no se acredita en Windows PC con este flujo. El script la omite en escritorio para evitar un comportamiento que Microsoft no contabiliza y que además entra en conflicto con sus políticas.
+
+## Android real
+
+La alternativa recomendada es usar un teléfono Android real conectado por USB y automatizarlo con `adb`. Este modo no usa Appium y es más corto de poner en marcha.
+
+```bash
+python autoclicker.py --android-adb --adb-serial <serial> --android-cycles 10
+```
+
+Guía rápida:
+
+1. Instala Android platform-tools y verifica que `adb` responde en la terminal con `adb version`.
+2. En tu teléfono, activa Opciones de desarrollador y luego USB debugging.
+3. Conecta el teléfono por USB y acepta la huella RSA cuando aparezca.
+4. Ejecuta `adb devices` y copia el serial que aparezca como `device`.
+5. Lanza el script con `python autoclicker.py --android-adb --adb-serial <serial> --android-cycles 10`.
+6. El script abrirá Bing en el teléfono, hará un desplazamiento gradual por la sección de noticias, intentará abrir la primera noticia visible con varios puntos de toque y, si hace falta, usará Enter como respaldo.
+7. Después esperará la carga, permanecerá un tiempo aleatorio dentro del artículo y volverá atrás.
+8. Repetirá ese ciclo el número de veces indicado con `--android-cycles`.
+
+Si tienes un solo dispositivo conectado, puedes omitir `--adb-serial`.
+
+En este modo, el script usa el paquete `com.microsoft.bing` y `uiautomator dump` para localizar titulares visibles, pero ya no depende de Appium ni de automatización de búsqueda en Android.
+
+## Consejos
+
+- Mantén la pantalla desbloqueada mientras corre el script.
+- Si `adb devices` muestra `unauthorized`, desconecta y vuelve a conectar el USB para aceptar la autorización.
+- Si Bing no abre en el teléfono, confirma que la app está instalada y actualizada.
+- Si no detecta noticias visibles, desplázate una vez manualmente dentro de Bing para cargar más contenido y vuelve a ejecutar.
 
 ## Configuración
 
