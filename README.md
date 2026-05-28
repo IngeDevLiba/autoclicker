@@ -18,7 +18,7 @@ Simula búsquedas en Microsoft Rewards de forma natural, distribuyéndolas a lo 
 ## Requisitos
 
 - Python 3.11 o superior
-- Google Chrome instalado
+- Google Chrome o Microsoft Edge instalado
 - Conexión a Internet
 
 ## Instalación
@@ -42,7 +42,7 @@ python autoclicker.py --account usuario@ejemplo.com --headless
 | Argumento | Descripción | Valor por defecto |
 |---|---|---|
 | `--account` | Identificador de cuenta (etiqueta para el log) | `default` |
-| `--headless` | Ejecutar Chrome sin ventana visible | No |
+| `--headless` | Ejecutar el navegador sin ventana visible | No |
 
 ## Configuración
 

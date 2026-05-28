@@ -23,6 +23,7 @@ import math
 import random
 import time
 from datetime import datetime
+from pathlib import Path
 
 from selenium import webdriver
 from selenium.common.exceptions import (
@@ -30,13 +31,16 @@ from selenium.common.exceptions import (
     TimeoutException,
     WebDriverException,
 )
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.edge.options import Options as EdgeOptions
+from selenium.webdriver.edge.service import Service as EdgeService
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
 from config import (
     ARTICLE_DWELL_MAX,
@@ -51,6 +55,8 @@ from config import (
     DAILY_SEARCHES_MIN,
     PAGE_LOAD_WAIT_MAX,
     PAGE_LOAD_WAIT_MIN,
+    NEWS_CARD_SELECTORS,
+    NEWS_READ_PROBABILITY,
     SCROLL_INTERVAL_MAX,
     SCROLL_INTERVAL_MIN,
     SEARCH_BAR_SELECTOR,
@@ -84,28 +90,83 @@ def _random_wait(lo: int, hi: int, reason: str = "") -> None:
     _wait(random.uniform(lo, hi), reason)
 
 
+def _find_first_element(
+    driver: webdriver.Chrome, selectors: list[str]
+) -> object | None:
+    for selector in selectors:
+        elements = driver.find_elements(By.CSS_SELECTOR, selector)
+        if elements:
+            return elements[0]
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Browser setup
 # ---------------------------------------------------------------------------
 
 
-def _build_driver(headless: bool) -> webdriver.Chrome:
-    opts = Options()
-    if headless:
-        opts.add_argument("--headless=new")
-    opts.add_argument("--no-sandbox")
-    opts.add_argument("--disable-dev-shm-usage")
-    opts.add_argument("--disable-blink-features=AutomationControlled")
-    opts.add_experimental_option("excludeSwitches", ["enable-automation"])
-    opts.add_experimental_option("useAutomationExtension", False)
-    # Realistic user-agent
-    opts.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
+def _find_browser_binary() -> tuple[str, str]:
+    chrome_candidates = [
+        Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
+        Path(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"),
+    ]
+    edge_candidates = [
+        Path(r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"),
+        Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"),
+    ]
+
+    for candidate in chrome_candidates:
+        if candidate.exists():
+            return "chrome", str(candidate)
+
+    for candidate in edge_candidates:
+        if candidate.exists():
+            return "edge", str(candidate)
+
+    raise RuntimeError(
+        "No se encontró Chrome ni Edge. Instala uno de los dos navegadores "
+        "o configura su ruta manualmente."
     )
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=opts)
+
+
+def _build_driver(headless: bool) -> webdriver.Chrome:
+    browser_name, binary_path = _find_browser_binary()
+
+    if browser_name == "edge":
+        opts = EdgeOptions()
+        opts.binary_location = binary_path
+        if headless:
+            opts.add_argument("--headless=new")
+        opts.add_argument("--no-sandbox")
+        opts.add_argument("--disable-dev-shm-usage")
+        opts.add_argument("--disable-blink-features=AutomationControlled")
+        opts.add_experimental_option("excludeSwitches", ["enable-automation"])
+        opts.add_experimental_option("useAutomationExtension", False)
+        opts.add_argument(
+            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        )
+        service = EdgeService(EdgeChromiumDriverManager().install())
+        driver = webdriver.Edge(service=service, options=opts)
+    else:
+        opts = ChromeOptions()
+        opts.binary_location = binary_path
+        if headless:
+            opts.add_argument("--headless=new")
+        opts.add_argument("--no-sandbox")
+        opts.add_argument("--disable-dev-shm-usage")
+        opts.add_argument("--disable-blink-features=AutomationControlled")
+        opts.add_experimental_option("excludeSwitches", ["enable-automation"])
+        opts.add_experimental_option("useAutomationExtension", False)
+        # Realistic user-agent
+        opts.add_argument(
+            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        )
+        service = ChromeService(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=opts)
     driver.execute_script(
         "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
     )
@@ -126,6 +187,8 @@ def _do_search(driver: webdriver.Chrome, account: str, query: str) -> None:
         random.uniform(PAGE_LOAD_WAIT_MIN, PAGE_LOAD_WAIT_MAX),
         "para que cargue la página",
     )
+
+    _maybe_read_homepage_news(driver, account, query)
 
     try:
         search_box = WebDriverWait(driver, 10).until(
@@ -151,6 +214,87 @@ def _do_search(driver: webdriver.Chrome, account: str, query: str) -> None:
     log_action(account=account, keyword=query, url=current_url, dwell_seconds=0)
 
 
+def _read_link_page(
+    driver: webdriver.Chrome,
+    account: str,
+    keyword: str,
+    link: object,
+    intro_text: str,
+    preserve_current_page: bool = False,
+) -> None:
+    link_text = getattr(link, "text", "").strip() or getattr(
+        link, "get_attribute", lambda _name: ""
+    )("href")
+    _say(f"{intro_text}: {link_text}…")
+
+    original_handle = driver.current_window_handle
+    opened_new_tab = False
+
+    try:
+        if preserve_current_page:
+            href = getattr(link, "get_attribute", lambda _name: "")("href")
+            if href:
+                driver.execute_script("window.open(arguments[0], '_blank');", href)
+                WebDriverWait(driver, 10).until(lambda d: len(d.window_handles) > 1)
+                driver.switch_to.window(driver.window_handles[-1])
+                opened_new_tab = True
+            else:
+                driver.execute_script("arguments[0].click();", link)
+        else:
+            driver.execute_script("arguments[0].click();", link)
+
+        dwell = random.uniform(ARTICLE_DWELL_MIN, ARTICLE_DWELL_MAX)
+        elapsed = 0.0
+
+        while elapsed < dwell:
+            interval = random.uniform(SCROLL_INTERVAL_MIN, SCROLL_INTERVAL_MAX)
+            if elapsed + interval > dwell:
+                interval = dwell - elapsed
+            time.sleep(interval)
+            elapsed += interval
+
+            scroll_px = random.randint(200, 600)
+            driver.execute_script(f"window.scrollBy(0, {scroll_px});")
+            _say(f"Desplazando página {scroll_px}px…")
+
+        final_url = driver.current_url
+        _say(f"Lectura completada durante {dwell:.0f} segundos.")
+        log_action(
+            account=account,
+            keyword=keyword,
+            url=final_url,
+            dwell_seconds=dwell,
+        )
+    finally:
+        if opened_new_tab:
+            driver.close()
+            driver.switch_to.window(original_handle)
+
+
+def _maybe_read_homepage_news(
+    driver: webdriver.Chrome, account: str, keyword: str
+) -> None:
+    """Open a visible Bing news card before starting the search."""
+    if random.random() > NEWS_READ_PROBABILITY:
+        return
+
+    link = _find_first_element(driver, NEWS_CARD_SELECTORS)
+    if link is None:
+        return
+
+    try:
+        _read_link_page(
+            driver,
+            account,
+            keyword,
+            link,
+            "Leyendo noticia visible",
+            preserve_current_page=True,
+        )
+    except (NoSuchElementException, WebDriverException, IndexError):
+        pass
+
+
 # ---------------------------------------------------------------------------
 # Article reading
 # ---------------------------------------------------------------------------
@@ -168,41 +312,10 @@ def _maybe_read_article(
 
     try:
         # Try to find the first organic result link
-        result_links = driver.find_elements(
-            By.CSS_SELECTOR, "li.b_algo h2 a, .b_algo h2 a"
-        )
-        if not result_links:
+        link = _find_first_element(driver, ["li.b_algo h2 a", ".b_algo h2 a"])
+        if link is None:
             return
-        link = result_links[0]
-        article_url = link.get_attribute("href") or ""
-        link_text = link.text.strip() or article_url
-
-        _say(f"Leyendo artículo: {link_text}…")
-        driver.execute_script("arguments[0].click();", link)
-
-        dwell = random.uniform(ARTICLE_DWELL_MIN, ARTICLE_DWELL_MAX)
-        elapsed = 0.0
-
-        while elapsed < dwell:
-            interval = random.uniform(SCROLL_INTERVAL_MIN, SCROLL_INTERVAL_MAX)
-            if elapsed + interval > dwell:
-                interval = dwell - elapsed
-            time.sleep(interval)
-            elapsed += interval
-
-            # Simulate scroll
-            scroll_px = random.randint(200, 600)
-            driver.execute_script(f"window.scrollBy(0, {scroll_px});")
-            _say(f"Desplazando página {scroll_px}px…")
-
-        final_url = driver.current_url
-        _say(f"Artículo leído durante {dwell:.0f} segundos.")
-        log_action(
-            account=account,
-            keyword=query,
-            url=final_url,
-            dwell_seconds=dwell,
-        )
+        _read_link_page(driver, account, query, link, "Leyendo artículo")
     except (NoSuchElementException, WebDriverException, IndexError):
         pass
 
