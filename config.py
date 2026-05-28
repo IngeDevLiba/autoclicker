@@ -27,12 +27,26 @@ BETWEEN_SEARCHES_MAX: int = 30
 # ------------------------------------------------------------------
 # Article reading dwell time (seconds)
 # ------------------------------------------------------------------
-ARTICLE_DWELL_MIN: int = 20
-ARTICLE_DWELL_MAX: int = 40
+ARTICLE_DWELL_MIN: int = 10
+ARTICLE_DWELL_MAX: int = 10
 
 # Interval between simulated scroll/click actions while reading (seconds)
 SCROLL_INTERVAL_MIN: int = 5
 SCROLL_INTERVAL_MAX: int = 12
+
+# ------------------------------------------------------------------
+# Android ADB news loop
+# ------------------------------------------------------------------
+ANDROID_NEWS_CYCLES: int = 5
+ANDROID_NEWS_SCAN_ATTEMPTS: int = 4
+ANDROID_NEWS_MIN_TOP_PX: int = 180
+ANDROID_NEWS_SCROLL_STEPS_MIN: int = 2
+ANDROID_NEWS_SCROLL_STEPS_MAX: int = 3
+ANDROID_NEWS_SCROLL_PAUSE_MIN: float = 0.2
+ANDROID_NEWS_SCROLL_PAUSE_MAX: float = 0.5
+ANDROID_NEWS_TAP_JITTER_PX: int = 12
+ANDROID_NEWS_RETURN_WAIT_MIN: int = 3
+ANDROID_NEWS_RETURN_WAIT_MAX: int = 10
 
 # ------------------------------------------------------------------
 # Daily schedule: blocks throughout the day
