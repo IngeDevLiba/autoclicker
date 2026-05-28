@@ -44,6 +44,10 @@ python autoclicker.py --account usuario@ejemplo.com --headless
 | `--account` | Identificador de cuenta (etiqueta para el log) | `default` |
 | `--headless` | Ejecutar el navegador sin ventana visible | No |
 
+## Nota sobre noticias
+
+La automatización de noticias de Microsoft Rewards no se acredita en Windows PC con este flujo. El script la omite en escritorio para evitar un comportamiento que Microsoft no contabiliza y que además entra en conflicto con sus políticas.
+
 ## Configuración
 
 Edita `config.py` para ajustar los parámetros de tiempo, número de búsquedas y bloques horarios.

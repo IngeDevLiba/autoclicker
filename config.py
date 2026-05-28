@@ -34,9 +34,6 @@ ARTICLE_DWELL_MAX: int = 40
 SCROLL_INTERVAL_MIN: int = 5
 SCROLL_INTERVAL_MAX: int = 12
 
-# Probability of opening a visible news item on the Bing homepage before a search
-NEWS_READ_PROBABILITY: float = 0.50
-
 # ------------------------------------------------------------------
 # Daily schedule: blocks throughout the day
 # Each entry is (start_hour, end_hour, fraction_of_daily_searches).
@@ -57,15 +54,6 @@ BLOCK_GAP_MAX: int = 300
 # ------------------------------------------------------------------
 BING_URL: str = "https://www.bing.com"
 SEARCH_BAR_SELECTOR: str = "textarea#sb_form_q, input#sb_form_q"
-
-# News/article selectors used to detect visible news cards on Bing
-NEWS_CARD_SELECTORS: list[str] = [
-    "a[href*='/news/']",
-    ".news-card a",
-    ".tabbed_news_card a",
-    ".b_promoteItem a",
-    "main a[href*='news']",
-]
 
 # Delay (seconds) after opening Bing before starting to type
 PAGE_LOAD_WAIT_MIN: float = 1.5

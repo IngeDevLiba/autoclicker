@@ -55,8 +55,6 @@ from config import (
     DAILY_SEARCHES_MIN,
     PAGE_LOAD_WAIT_MAX,
     PAGE_LOAD_WAIT_MIN,
-    NEWS_CARD_SELECTORS,
-    NEWS_READ_PROBABILITY,
     SCROLL_INTERVAL_MAX,
     SCROLL_INTERVAL_MIN,
     SEARCH_BAR_SELECTOR,
@@ -64,6 +62,8 @@ from config import (
 from logger import log_action
 from searches import get_random_queries
 from typer import type_naturally
+
+_NEWS_SKIP_WARNED = False
 
 
 # ---------------------------------------------------------------------------
@@ -220,79 +220,50 @@ def _read_link_page(
     keyword: str,
     link: object,
     intro_text: str,
-    preserve_current_page: bool = False,
 ) -> None:
     link_text = getattr(link, "text", "").strip() or getattr(
         link, "get_attribute", lambda _name: ""
     )("href")
     _say(f"{intro_text}: {link_text}…")
 
-    original_handle = driver.current_window_handle
-    opened_new_tab = False
+    driver.execute_script("arguments[0].click();", link)
 
-    try:
-        if preserve_current_page:
-            href = getattr(link, "get_attribute", lambda _name: "")("href")
-            if href:
-                driver.execute_script("window.open(arguments[0], '_blank');", href)
-                WebDriverWait(driver, 10).until(lambda d: len(d.window_handles) > 1)
-                driver.switch_to.window(driver.window_handles[-1])
-                opened_new_tab = True
-            else:
-                driver.execute_script("arguments[0].click();", link)
-        else:
-            driver.execute_script("arguments[0].click();", link)
+    dwell = random.uniform(ARTICLE_DWELL_MIN, ARTICLE_DWELL_MAX)
+    elapsed = 0.0
 
-        dwell = random.uniform(ARTICLE_DWELL_MIN, ARTICLE_DWELL_MAX)
-        elapsed = 0.0
+    while elapsed < dwell:
+        interval = random.uniform(SCROLL_INTERVAL_MIN, SCROLL_INTERVAL_MAX)
+        if elapsed + interval > dwell:
+            interval = dwell - elapsed
+        time.sleep(interval)
+        elapsed += interval
 
-        while elapsed < dwell:
-            interval = random.uniform(SCROLL_INTERVAL_MIN, SCROLL_INTERVAL_MAX)
-            if elapsed + interval > dwell:
-                interval = dwell - elapsed
-            time.sleep(interval)
-            elapsed += interval
+        scroll_px = random.randint(200, 600)
+        driver.execute_script(f"window.scrollBy(0, {scroll_px});")
+        _say(f"Desplazando página {scroll_px}px…")
 
-            scroll_px = random.randint(200, 600)
-            driver.execute_script(f"window.scrollBy(0, {scroll_px});")
-            _say(f"Desplazando página {scroll_px}px…")
-
-        final_url = driver.current_url
-        _say(f"Lectura completada durante {dwell:.0f} segundos.")
-        log_action(
-            account=account,
-            keyword=keyword,
-            url=final_url,
-            dwell_seconds=dwell,
-        )
-    finally:
-        if opened_new_tab:
-            driver.close()
-            driver.switch_to.window(original_handle)
+    final_url = driver.current_url
+    _say(f"Lectura completada durante {dwell:.0f} segundos.")
+    log_action(
+        account=account,
+        keyword=keyword,
+        url=final_url,
+        dwell_seconds=dwell,
+    )
 
 
 def _maybe_read_homepage_news(
     driver: webdriver.Chrome, account: str, keyword: str
 ) -> None:
-    """Open a visible Bing news card before starting the search."""
-    if random.random() > NEWS_READ_PROBABILITY:
+    """Desktop Rewards does not credit the mobile news flow, so skip it."""
+    global _NEWS_SKIP_WARNED
+    if _NEWS_SKIP_WARNED:
         return
-
-    link = _find_first_element(driver, NEWS_CARD_SELECTORS)
-    if link is None:
-        return
-
-    try:
-        _read_link_page(
-            driver,
-            account,
-            keyword,
-            link,
-            "Leyendo noticia visible",
-            preserve_current_page=True,
-        )
-    except (NoSuchElementException, WebDriverException, IndexError):
-        pass
+    _NEWS_SKIP_WARNED = True
+    _say(
+        "La lectura de noticias de Microsoft Rewards no se acredita en PC; "
+        "se omite esta parte en Windows."
+    )
 
 
 # ---------------------------------------------------------------------------
