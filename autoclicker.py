@@ -549,6 +549,11 @@ def _seconds_until_hour(target_hour: int) -> float:
     return max(0.0, delta)
 
 
+def _desktop_block_wait_seconds() -> int:
+    """Return a short desktop-only pause between blocks, in seconds."""
+    return random.randint(2 * 60, 5 * 60)
+
+
 # ---------------------------------------------------------------------------
 # Main session runner
 # ---------------------------------------------------------------------------
@@ -604,14 +609,12 @@ def run_session(
             if block_n == 0:
                 continue
 
-            # Wait until the block start hour if needed
-            wait_secs = _seconds_until_hour(start_hour)
-            if wait_secs > 0:
-                _say(
-                    f"Bloque {block_idx + 1}: esperando hasta las "
-                    f"{start_hour:02d}:00 ({wait_secs / 60:.0f} min)…"
-                )
-                time.sleep(wait_secs)
+            # Desktop-only short pause before each block.
+            wait_secs = _desktop_block_wait_seconds()
+            _say(
+                f"Bloque {block_idx + 1}: pausa corta de {wait_secs // 60} min antes de seguir…"
+            )
+            time.sleep(wait_secs)
 
             _say(
                 f"Bloque {block_idx + 1} ({start_hour:02d}:00–{end_hour:02d}:00): "
@@ -635,7 +638,7 @@ def run_session(
 
             # Gap between blocks (skip after last block)
             if block_idx < len(DAILY_BLOCKS) - 1:
-                gap = random.randint(BLOCK_GAP_MIN, BLOCK_GAP_MAX)
+                gap = _desktop_block_wait_seconds()
                 _wait(gap, "antes del siguiente bloque")
 
     finally:

@@ -1,213 +1,218 @@
 # Microsoft Rewards Autoclicker
 
-> 🟢 Automatización de flujo de búsquedas y lectura móvil con enfoque ADB para Android real por USB.
+Automatización para dos flujos separados:
 
-## ✨ ¿Qué hace este proyecto?
+- Búsquedas web en Windows con Microsoft Edge.
+- Lectura de noticias en Android real por USB usando ADB.
 
-Este script automatiza comportamientos tipo usuario para Microsoft Rewards:
+## Qué hace
 
-- 🧠 Simula búsquedas con escritura natural (desktop).
-- 📱 Lee noticias en Android real por USB usando ADB.
-- 🧭 Filtra contenido no deseado en móvil:
-	- ignora anuncios,
-	- ignora tarjetas de video,
-	- rechaza banners de cookies cuando aparecen.
-- 📝 Guarda trazabilidad en CSV por cuenta en la carpeta logs.
+Este proyecto:
 
-## 🎬 Flujo visual del modo Android
+- escribe búsquedas de forma natural en desktop,
+- mantiene pausas cortas entre bloques en Windows,
+- lee noticias en Android por USB,
+- filtra anuncios, tarjetas de video y banners de cookies en móvil,
+- guarda trazabilidad por cuenta en CSV dentro de `logs/`.
 
-Inicio → Scroll inicial largo → Detectar noticia válida → Tap centrado
-→ Rechazar cookies (si aparece) → Scroll dentro del artículo
-→ Espera de lectura → Volver atrás → Scroll de salida → Siguiente ciclo
-
-## ✅ Requisitos
-
-### Requisitos generales
+## Requisitos
 
 - Python 3.11 o superior.
-- Windows con conexión a Internet.
-- Dependencias del proyecto instaladas.
+- Windows con Microsoft Edge instalado.
+- Conexión a Internet para el flujo desktop.
+- Android platform-tools instalado si vas a usar el modo USB.
+- Teléfono Android real con USB debugging habilitado.
+- App Microsoft Bing instalada en el teléfono para el modo Android.
 
-### Requisitos desktop
+## Instalación
 
-- Microsoft Edge instalado.
+### 1. Abrir la carpeta del proyecto
 
-### Requisitos Android USB (modo recomendado para noticias)
-
-- Android platform-tools instalado (adb disponible).
-- Teléfono Android real (USB).
-- App Microsoft Bing instalada en el teléfono.
-- USB debugging habilitado en Opciones de desarrollador.
-
-## 🚀 Instalación paso a paso
-
-### 1) Clonar o abrir proyecto
-
-Ubícate en la carpeta del proyecto:
-
-```bash
+```powershell
 cd c:\Users\LAAO\Projects\autoclicker
 ```
 
-### 2) Crear y activar entorno virtual (recomendado)
-
-PowerShell:
+### 2. Crear el entorno virtual
 
 ```powershell
 python -m venv .venv
+```
+
+### 3. Activar el entorno virtual
+
+```powershell
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 3) Instalar dependencias
+### 4. Instalar dependencias
 
-```bash
+```powershell
 pip install -r requirements.txt
 ```
 
-## 🧪 Verificación rápida del entorno
+## Verificación rápida
 
-### Verificar Python
+### Python
 
-```bash
+```powershell
 python --version
 ```
 
-### Verificar ADB
+### ADB
 
-```bash
+```powershell
 adb version
 adb devices
 ```
 
-Si el teléfono aparece como unauthorized:
+Si el teléfono aparece como `unauthorized`:
 
-1. Desconecta USB.
-2. Conecta de nuevo.
+1. Desconecta el USB.
+2. Vuelve a conectarlo.
 3. Acepta la huella RSA en el teléfono.
-4. Ejecuta adb devices otra vez.
+4. Ejecuta `adb devices` otra vez.
 
-## 🖥️ Ejecución desktop (búsquedas)
+## Uso desktop
 
-### Cuenta por defecto
+### Ejecución normal
 
-```bash
+```powershell
 python autoclicker.py
 ```
 
-### Cuenta personalizada + headless
+### Cuenta personalizada
 
-```bash
-python autoclicker.py --account usuario@ejemplo.com --headless
+```powershell
+python autoclicker.py --account usuario@ejemplo.com
 ```
 
-> ⚠️ Nota: para Microsoft Rewards en escritorio, el modo headless puede no acreditar búsquedas. El script mostrará un aviso y abrirá Microsoft Edge en modo visible para aumentar la validez de las búsquedas.
+### Modo seguro sin red
 
-## 📱 Ejecución Android USB (ADB)
+```powershell
+python autoclicker.py --simulate
+```
 
-### Comando recomendado
+Este modo solo genera búsquedas y las registra en CSV. No abre navegador ni accede a la web.
 
-```bash
+### Comportamiento del escritorio
+
+- El script usa Microsoft Edge.
+- No abre enlaces de resultados.
+- Entre bloques hace pausas cortas de minutos, no de horas.
+- Entre búsquedas hace una pausa breve aleatoria.
+
+## Uso Android por USB
+
+### Comando
+
+```powershell
 python autoclicker.py --android-adb --adb-serial <serial> --android-cycles 10
 ```
 
-Si tienes un solo dispositivo conectado, puedes omitir adb-serial.
+Si solo hay un dispositivo conectado, puedes omitir `--adb-serial`.
 
-### Pasos detallados en el teléfono
+### Pasos recomendados
 
-1. Abre Bing y déjalo instalado/actualizado.
-2. Mantén pantalla desbloqueada durante la ejecución.
-3. Conecta por USB y verifica serial con adb devices.
-4. Ejecuta el comando anterior.
-5. El script:
-	 - hará scroll inicial,
-	 - elegirá noticias válidas,
-	 - evitará anuncios y videos,
-	 - rechazará cookies cuando detecte botón de rechazo,
-	 - hará scroll dentro del artículo,
-	 - volverá al feed y repetirá.
+1. Abre Bing en el teléfono y déjalo actualizado.
+2. Mantén la pantalla desbloqueada durante la ejecución.
+3. Conecta el teléfono por USB.
+4. Ejecuta `adb devices` y confirma que el serial aparece como `device`.
+5. Lanza el comando anterior.
+6. El script hará scroll inicial, buscará tarjetas válidas, rechazará cookies si aparece el botón y volverá al feed al terminar cada ciclo.
 
-## ⚙️ Argumentos disponibles
+## Argumentos disponibles
 
 | Argumento | Descripción | Valor por defecto |
 |---|---|---|
-| --account | Identificador de cuenta (etiqueta para logs) | default |
-| --headless | Ejecuta navegador sin UI visible (desktop) | No |
-| --android-adb | Activa flujo móvil ADB por USB | No |
-| --adb-serial | Serial ADB del dispositivo Android | Vacío |
-| --android-cycles | Cantidad de ciclos de lectura móvil | 10 |
-| --simulate | Genera y registra las búsquedas sin acceder a la web (modo seguro) | No |
+| `--account` | Identificador de cuenta para logs | `default` |
+| `--headless` | Ejecuta el navegador sin UI visible en desktop | No |
+| `--android-adb` | Activa el flujo móvil por USB | No |
+| `--adb-serial` | Serial ADB del dispositivo Android | Vacío |
+| `--android-cycles` | Cantidad de ciclos de lectura móvil | `10` |
+| `--simulate` | Genera y registra búsquedas sin acceder a la web | No |
 
-## 🧩 Configuración avanzada
+## Configuración
 
-Edita config.py para afinar comportamiento.
+Edita `config.py` si quieres ajustar tiempos, bloques o filtros.
 
-Parámetros útiles del modo Android:
+Parámetros útiles:
 
-- ARTICLE_DWELL_MIN / ARTICLE_DWELL_MAX
-- ANDROID_NEWS_CYCLES
-- ANDROID_NEWS_MIN_TOP_PX
-- ANDROID_NEWS_SCROLL_STEPS_MIN / MAX
-- ANDROID_NEWS_RETURN_WAIT_MIN / MAX
+- `DAILY_SEARCHES_MIN` / `DAILY_SEARCHES_MAX`
+- `BETWEEN_SEARCHES_MIN` / `BETWEEN_SEARCHES_MAX`
+- `BLOCK_GAP_MIN` / `BLOCK_GAP_MAX`
+- `ANDROID_NEWS_CYCLES`
+- `ANDROID_NEWS_MIN_TOP_PX`
+- `ANDROID_NEWS_SCROLL_STEPS_MIN` / `ANDROID_NEWS_SCROLL_STEPS_MAX`
+- `ANDROID_NEWS_RETURN_WAIT_MIN` / `ANDROID_NEWS_RETURN_WAIT_MAX`
 
-## 🛡️ Filtros inteligentes en Android
+## Filtros Android
 
-El selector móvil descarta automáticamente:
+El selector móvil intenta evitar:
 
-- 🔕 tarjetas de anuncios: anuncio, patrocinado, publicidad, sponsored, etc.
-- 🎥 tarjetas de video: video, reproducir, play, duración, y sellos como 02:13.
-- 🔝 elementos de cabecera superior (evita tocar el buscador).
+- anuncios,
+- tarjetas de video,
+- elementos superiores del encabezado,
+- banners de cookies cuando detecta un botón de rechazo.
 
-## 🧾 Logs y salida
+## Logs
 
-Se crea un CSV por cuenta en logs con formato:
+Cada cuenta genera un CSV en `logs/`.
+
+Ejemplo:
 
 ```csv
 date,account,keyword,url,dwell_seconds
 2025-06-01 08:15:32,usuario@ejemplo.com,titular visible,adb://device,10.0
 ```
 
-## 🧪 Pruebas
+## Pruebas
 
-```bash
+```powershell
 python -m pytest tests/ -v
 ```
 
-## 🗂️ Estructura del proyecto
+## Estructura
 
 ```text
 autoclicker/
 ├── autoclicker.py
+├── android_helpers.py
 ├── config.py
+├── logger.py
 ├── searches.py
 ├── typer.py
-├── logger.py
 ├── requirements.txt
 ├── tests/
 └── logs/
 ```
 
-## 🧯 Solución de problemas
+## Solución de problemas
 
-### El script toca el buscador superior
+### El script tarda demasiado entre bloques
 
-- Aumenta ANDROID_NEWS_MIN_TOP_PX en config.py.
+- Revisa `DAILY_BLOCKS` en `config.py`.
+- El modo desktop usa pausas cortas de minutos entre bloques.
 
-### El script no detecta noticias válidas
+### El script toca un elemento demasiado alto en Android
 
-- Haz un scroll manual en Bing para refrescar cards.
-- Verifica que no estés en una pestaña distinta del feed.
+- Sube `ANDROID_NEWS_MIN_TOP_PX` en `config.py`.
 
-### No aparece el teléfono en adb devices
+### No aparece el teléfono en `adb devices`
 
-- Revisa cable USB de datos.
-- Activa USB debugging.
-- Reinstala drivers USB/OEM si aplica.
+- Revisa el cable USB.
+- Verifica que USB debugging esté activado.
+- Instala o repara los drivers USB/OEM si hace falta.
 
-### Aparece banner de cookies y bloquea flujo
+### El flujo Android no detecta noticias válidas
 
-- El script intenta rechazar automáticamente.
-- Si cambia el texto del botón, se puede ampliar el matcher.
+- Haz un scroll manual en Bing para refrescar las cards.
+- Verifica que estés en el feed correcto.
 
-## ⚠️ Nota de uso
+### El banner de cookies cambia de texto
 
-Usa este proyecto bajo tu responsabilidad y respetando los términos y políticas de la plataforma objetivo.
+- El script intenta rechazarlo automáticamente.
+- Si cambió el texto del botón, habrá que ampliar el matcher.
+
+## Nota
+
+Usa este proyecto respetando los términos y políticas de la plataforma objetivo.
