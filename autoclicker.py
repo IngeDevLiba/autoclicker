@@ -40,8 +40,14 @@ from selenium.common.exceptions import (
 )
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.edge.options import Options as EdgeOptions
+from selenium.webdriver.edge.service import Service as EdgeService
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
 from config import (
     ARTICLE_DWELL_MAX,
@@ -107,6 +113,56 @@ def _driver_location(driver: Any, fallback: str = "") -> str:
     except WebDriverException:
         location = ""
     return location or fallback
+
+
+def _find_browser_binary() -> tuple[str, str]:
+    chrome_candidates = [
+        Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
+        Path(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"),
+    ]
+    edge_candidates = [
+        Path(r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"),
+        Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"),
+    ]
+
+    for candidate in chrome_candidates:
+        if candidate.exists():
+            return "chrome", str(candidate)
+
+    for candidate in edge_candidates:
+        if candidate.exists():
+            return "edge", str(candidate)
+
+    raise RuntimeError(
+        "No se encontró Chrome ni Edge. Instala uno de los dos navegadores o configura su ruta manualmente."
+    )
+
+
+def _build_driver(headless: bool) -> webdriver.Chrome:
+    browser_name, browser_binary = _find_browser_binary()
+
+    if browser_name == "chrome":
+        options = ChromeOptions()
+        options.binary_location = browser_binary
+        if headless:
+            options.add_argument("--headless=new")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--window-size=1280,900")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        service = ChromeService(ChromeDriverManager().install())
+        return webdriver.Chrome(service=service, options=options)
+
+    options = EdgeOptions()
+    options.binary_location = browser_binary
+    if headless:
+        options.add_argument("--headless=new")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--window-size=1280,900")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    service = EdgeService(EdgeChromiumDriverManager().install())
+    return webdriver.Edge(service=service, options=options)
 
 
 def _find_first_element(
