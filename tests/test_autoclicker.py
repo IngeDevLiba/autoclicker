@@ -24,6 +24,18 @@ def test_parse_android_bounds_returns_centerable_box():
     assert autoclicker._android_bounds_center("[10,20][110,220]") == (60, 120)
 
 
+def test_find_browser_binary_prefers_edge(monkeypatch):
+    def fake_exists(self):
+        return str(self).lower().endswith("msedge.exe")
+
+    monkeypatch.setattr(autoclicker.Path, "exists", fake_exists, raising=False)
+
+    browser_name, browser_binary = autoclicker._find_browser_binary()
+
+    assert browser_name == "edge"
+    assert browser_binary.lower().endswith("msedge.exe")
+
+
 def test_is_news_like_text_rejects_ad_labels():
     assert autoclicker._is_news_like_text("Anuncio patrocinado del día") is False
     assert autoclicker._is_news_like_text("Titular visible sobre tecnología y economía") is True
@@ -178,6 +190,37 @@ def test_run_session_android_adb_dispatches_to_adb_mode(monkeypatch):
     )
 
     assert called == {"account": "demo@example.com", "adb_serial": "emulator-5554", "cycles": 7}
+
+
+def test_run_session_desktop_forces_visible_browser_when_headless_is_requested(monkeypatch):
+    called = {}
+
+    def fake_build_driver(headless: bool):
+        called["headless"] = headless
+
+        class DummyDriver:
+            def quit(self):
+                called["quit"] = True
+
+        return DummyDriver()
+
+    monkeypatch.setattr(autoclicker, "_build_driver", fake_build_driver)
+    monkeypatch.setattr(autoclicker, "_do_search", lambda *args, **kwargs: None)
+    monkeypatch.setattr(autoclicker, "_searches_per_block", lambda total: [0, 0, total])
+    monkeypatch.setattr(autoclicker, "_seconds_until_hour", lambda *args, **kwargs: 0.0)
+    monkeypatch.setattr(autoclicker, "_wait", lambda *args, **kwargs: None)
+    monkeypatch.setattr(autoclicker, "_random_wait", lambda *args, **kwargs: None)
+    monkeypatch.setattr(autoclicker, "_say", lambda *args, **kwargs: None)
+    monkeypatch.setattr(autoclicker.random, "randint", lambda *args, **kwargs: 1)
+    monkeypatch.setattr(autoclicker, "get_random_queries", lambda total: [f"q{i}" for i in range(total)])
+
+    autoclicker.run_session(
+        account="demo@example.com",
+        headless=True,
+        android_adb=False,
+    )
+
+    assert called.get("quit") is True
 
 
 def test_android_adb_news_session_taps_visible_candidate(monkeypatch):

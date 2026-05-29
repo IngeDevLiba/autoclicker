@@ -30,7 +30,7 @@ Inicio → Scroll inicial largo → Detectar noticia válida → Tap centrado
 
 ### Requisitos desktop
 
-- Google Chrome o Microsoft Edge instalado.
+- Microsoft Edge instalado.
 
 ### Requisitos Android USB (modo recomendado para noticias)
 
@@ -100,7 +100,7 @@ python autoclicker.py
 python autoclicker.py --account usuario@ejemplo.com --headless
 ```
 
-> ℹ️ Nota: la lectura de noticias en desktop no se usa para acreditación de Rewards con este flujo.
+> ⚠️ Nota: para Microsoft Rewards en escritorio, el modo headless puede no acreditar búsquedas. El script mostrará un aviso y abrirá Microsoft Edge en modo visible para aumentar la validez de las búsquedas.
 
 ## 📱 Ejecución Android USB (ADB)
 
