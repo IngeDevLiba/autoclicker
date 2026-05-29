@@ -135,6 +135,7 @@ Si tienes un solo dispositivo conectado, puedes omitir adb-serial.
 | --android-adb | Activa flujo móvil ADB por USB | No |
 | --adb-serial | Serial ADB del dispositivo Android | Vacío |
 | --android-cycles | Cantidad de ciclos de lectura móvil | 10 |
+| --simulate | Genera y registra las búsquedas sin acceder a la web (modo seguro) | No |
 
 ## 🧩 Configuración avanzada
 

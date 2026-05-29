@@ -202,6 +202,23 @@ def _interactive_profile_check(account: str) -> None:
             print("Opción no válida. Intenta de nuevo.")
 
 
+def _write_simulation_log(account: str, queries: list[str]) -> None:
+    """Write simulated queries to a CSV file under LOG_DIR.
+
+    This does not perform any network action; it's a safe artifact for testing.
+    """
+    import csv as _csv
+    from datetime import datetime as _dt
+
+    out_path = Path(LOG_DIR) / f"simulated-{account.replace('@','_at_')}.csv"
+    os.makedirs(LOG_DIR, exist_ok=True)
+    with open(out_path, "w", newline="", encoding="utf-8") as fh:
+        writer = _csv.writer(fh)
+        writer.writerow(["date", "account", "keyword"])
+        for q in queries:
+            writer.writerow([_dt.now().strftime(LOG_DATE_FORMAT), account, q])
+
+
 def _find_browser_binary() -> tuple[str, str]:
     edge_candidates = [
         Path(r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"),
@@ -954,6 +971,7 @@ def run_session(
     android_adb: bool = False,
     adb_serial: str = "",
     android_cycles: int | None = None,
+    simulate: bool = False,
 ) -> None:
     if android_adb:
         _run_android_adb_news_session(
@@ -961,6 +979,15 @@ def run_session(
             adb_serial=adb_serial,
             cycles=android_cycles,
         )
+        return
+
+    if simulate:
+        # Safe simulation: generate queries and write to a simulated log file
+        total = random.randint(DAILY_SEARCHES_MIN, DAILY_SEARCHES_MAX)
+        queries = get_random_queries(total)
+        _say(f"Modo SIMULATE activado: generando {total} búsquedas para '{account}' (sin red)")
+        _write_simulation_log(account, queries)
+        _say("Simulación completada. No se abrió navegador ni se accedió a la web.")
         return
 
     if headless:
@@ -1070,6 +1097,14 @@ def _parse_args() -> argparse.Namespace:
         default=ANDROID_NEWS_CYCLES,
         help="Número de ciclos de lectura de noticias en Android.",
     )
+    parser.add_argument(
+        "--simulate",
+        action="store_true",
+        help=(
+            "Generar y registrar las búsquedas previstas sin abrir un navegador "
+            "ni acceder a la web (modo seguro para pruebas)."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -1081,4 +1116,5 @@ if __name__ == "__main__":
         android_adb=args.android_adb,
         adb_serial=args.adb_serial,
         android_cycles=args.android_cycles,
+        simulate=args.simulate,
     )
