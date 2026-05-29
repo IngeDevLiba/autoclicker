@@ -27,6 +27,8 @@ import shutil
 import subprocess
 import time
 import tempfile
+import csv
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -110,6 +112,94 @@ def _driver_location(driver: Any, fallback: str = "") -> str:
     except WebDriverException:
         location = ""
     return location or fallback
+
+
+def load_accounts(path: Path) -> dict[str, dict[str, str]]:
+    """Load accounts mapping from a CSV file.
+
+    Expected CSV headers: account,email,user_data_dir,profile_directory
+    Returns a mapping keyed by email -> {user_data_dir, profile_directory}
+    """
+    if not path.exists():
+        return {}
+
+    mapping: dict[str, dict[str, str]] = {}
+    with open(path, newline="", encoding="utf-8") as fh:
+        reader = csv.DictReader(fh)
+        for row in reader:
+            email = (row.get("email") or row.get("account") or "").strip()
+            if not email:
+                continue
+            mapping[email] = {
+                "user_data_dir": (row.get("user_data_dir") or "").strip(),
+                "profile_directory": (row.get("profile_directory") or "").strip(),
+            }
+    return mapping
+
+
+def _interactive_profile_check(account: str) -> None:
+    """Ask the user to verify or launch the Edge profile before searches.
+
+    This helper is deliberately interactive: it can launch the local
+    `edge_profile_launcher.py` to open the requested profile in Edge, but
+    requires manual confirmation before continuing. If the user cancels,
+    the program exits.
+    """
+    accounts_path = Path("accounts.csv")
+    accounts = load_accounts(accounts_path)
+
+    info = accounts.get(account)
+    if not info:
+        print(
+            f"No existe un mapeo de perfil para la cuenta '{account}' en {accounts_path}."
+        )
+        ans = input("¿Deseas continuar sin abrir perfil? (y=continuar, c=cancelar) [y]: ")
+        if ans.strip().lower().startswith("c"):
+            print("Ejecución cancelada por el usuario.")
+            raise SystemExit(1)
+        return
+
+    user_data_dir = info.get("user_data_dir")
+    profile_dir = info.get("profile_directory")
+
+    print("Perfil detectado para la cuenta:")
+    print(f"  email: {account}")
+    print(f"  user_data_dir: {user_data_dir}")
+    print(f"  profile_directory: {profile_dir}")
+
+    while True:
+        print("Opciones: [l]anzar perfil  [c]onfirmar abierto  [s]altar/cancelar")
+        choice = input("Elige una opción (l/c/s): ").strip().lower()
+        if choice == "l":
+            launcher = Path(__file__).parent / "edge_profile_launcher.py"
+            if not launcher.exists():
+                print("No se encontró el lanzador de perfiles (edge_profile_launcher.py).")
+                continue
+            cmd = [
+                sys.executable,
+                str(launcher),
+                "--user-data-dir",
+                user_data_dir,
+                "--profile-directory",
+                profile_dir,
+                "--start-minimized",
+            ]
+            print("Lanzando Edge con el perfil seleccionado...")
+            subprocess.Popen(cmd)
+            # After launching, ask user to confirm
+        elif choice == "c":
+            confirmed = input(
+                "Confirma que el perfil está abierto y la sesión iniciada (y/n): "
+            ).strip().lower()
+            if confirmed == "y":
+                return
+            else:
+                continue
+        elif choice == "s":
+            print("Saltando verificación de perfil.")
+            return
+        else:
+            print("Opción no válida. Intenta de nuevo.")
 
 
 def _find_browser_binary() -> tuple[str, str]:
@@ -888,6 +978,13 @@ def run_session(
         f"Sesión iniciada para la cuenta '{account}'. "
         f"Total de búsquedas planificadas hoy: {total}."
     )
+
+    # Before creating the browser, let the user verify or open the Edge profile
+    try:
+        _interactive_profile_check(account)
+    except SystemExit:
+        _say("Usuario canceló la ejecución durante la verificación de perfil.")
+        return
 
     driver = _build_driver(headless)
     try:
