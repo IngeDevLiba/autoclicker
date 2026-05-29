@@ -15,8 +15,8 @@ TYPO_PROBABILITY: float = 0.04
 # ------------------------------------------------------------------
 # Searches per day
 # ------------------------------------------------------------------
-DAILY_SEARCHES_MIN: int = 30
-DAILY_SEARCHES_MAX: int = 40
+DAILY_SEARCHES_MIN: int = 15
+DAILY_SEARCHES_MAX: int = 25
 
 # ------------------------------------------------------------------
 # Delays between searches (seconds)
